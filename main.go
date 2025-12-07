@@ -11,13 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
+	"github.com/care-giver-app/care-giver-golang-common/pkg/awsconfig"
+	"github.com/care-giver-app/care-giver-golang-common/pkg/dynamo"
+	"github.com/care-giver-app/care-giver-golang-common/pkg/receiver"
+	"github.com/care-giver-app/care-giver-golang-common/pkg/relationship"
+	"github.com/care-giver-app/care-giver-golang-common/pkg/repository"
+	"github.com/care-giver-app/care-giver-golang-common/pkg/user"
 	"github.com/care-giver-app/care-giver-notification-executor/internal/appconfig"
-	"github.com/care-giver-app/care-giver-notification-executor/internal/awsconfig"
-	"github.com/care-giver-app/care-giver-notification-executor/internal/dynamo"
-	"github.com/care-giver-app/care-giver-notification-executor/internal/receiver"
-	"github.com/care-giver-app/care-giver-notification-executor/internal/relationship"
-	"github.com/care-giver-app/care-giver-notification-executor/internal/repository"
-	"github.com/care-giver-app/care-giver-notification-executor/internal/user"
 )
 
 const (
@@ -224,12 +224,12 @@ func init() {
 
 	appCfg.AWSConfig = cfg
 
-	dynamoClient = dynamo.CreateClient(appCfg)
+	dynamoClient = dynamo.CreateClient(appCfg.Env, appCfg.AWSConfig, appCfg.Logger)
 
 	sesClient = ses.NewFromConfig(cfg)
 
-	receiverRepo = repository.NewReceiverRespository(context.TODO(), appCfg, dynamoClient)
-	userRepo = repository.NewUserRespository(context.TODO(), appCfg, dynamoClient)
+	receiverRepo = repository.NewReceiverRespository(context.TODO(), appCfg.ReceiverTableName, dynamoClient, appCfg.Logger)
+	userRepo = repository.NewUserRespository(context.TODO(), appCfg.UserTableName, dynamoClient, appCfg.Logger)
 
 	appCfg.Logger.Info("initializing relationship repository")
 }
