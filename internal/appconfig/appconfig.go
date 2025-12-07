@@ -46,7 +46,9 @@ func (a *AppConfig) ReadEnvVars() {
 func getEnvVarStringOrDefault(envVar string, defaultValue string) string {
 	env, present := os.LookupEnv(envVar)
 	if present {
+		fmt.Printf("PRESENT: %s=%s\n", envVar, env)
 		return env
 	}
+	fmt.Printf("NOT PRESENT: %s=%s\n", envVar, defaultValue)
 	return defaultValue
 }
