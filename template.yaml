@@ -1,0 +1,124 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  care-giver-notification-executor
+
+  Sample SAM Template for care-giver-notification-executor
+
+Parameters:
+  Env:
+    Type: String
+  SenderEmail:
+    Type: String
+    Description: "Verified SES email address for sending notifications"
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 128
+    LoggingConfig:
+      LogFormat: JSON
+Resources:
+  CareGiverNotificationExecutorDynamoPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub DynamoDBCareGiverNotificationExecutor-${Env}
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:BatchGetItem
+          - dynamodb:ConditionCheckItem
+          - dynamodb:DescribeTable
+          - dynamodb:GetItem
+          - dynamodb:Scan
+          - dynamodb:Query
+          Resource: 
+          - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/user-table-${Env}
+          - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/receiver-table-${Env}
+          - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/event-table-${Env}
+        - Effect: Allow
+          Action:
+          - sqs:ReceiveMessage
+          - sqs:DeleteMessage
+          - sqs:GetQueueAttributes
+          Resource: 
+          - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:care-giver-notifications-${Env}
+          - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:care-giver-notifications-dlq-${Env}
+        - Effect: Allow
+          Action:
+          - ses:SendEmail
+          - ses:SendRawEmail
+          - ses:SendTemplatedEmail
+          Resource: "*"
+      Roles:
+      - Ref: CareGiverNotificationExecutorRole
+    Metadata:
+      SamResourceId: CareGiverNotificationExecutorPolicy
+  CareGiverNotificationExecutorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CareGiverNotificationExecutorRole-${Env}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      SamResourceId: CareGiverNotificationExecutorRole
+  CareGiverNotificationExecutorFunction:
+    Type: AWS::Serverless::Function 
+    Metadata:
+      BuildMethod: go1.x
+      SamResourceId: CareGiverNotificationExecutorFunction
+    Properties:
+      FunctionName: !Sub care-giver-notification-executor-${Env}
+      Role: !GetAtt CareGiverNotificationExecutorRole.Arn
+      CodeUri: function.zip
+      Handler: bootstrap
+      Runtime: provided.al2
+      Architectures:
+      - x86_64
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:care-giver-notifications-${Env}
+            BatchSize: 10
+            MaximumBatchingWindowInSeconds: 5
+      Environment: 
+        Variables:
+          ENV: !Ref Env
+          USER_TABLE_NAME: !Sub user-table-${Env}
+          RECEIVER_TABLE_NAME: !Sub receiver-table-${Env}
+          EVENT_TABLE_NAME: !Sub event-table-${Env}
+          SES_SENDER_EMAIL: !Ref SenderEmail
+
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name: !Sub ApplicationInsights-SAM-${AWS::StackName}
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+  ApplicationInsightsMonitoring:
+    Type: AWS::ApplicationInsights::Application
+    Properties:
+      ResourceGroupName:
+        Ref: ApplicationResourceGroup
+      AutoConfigurationEnabled: 'true'
+Outputs:
+  CareGiverNotificationExecutorFunction:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt CareGiverNotificationExecutorFunction.Arn
+
+  CareGiverNotificationExecutorFunctionRole:
+    Description: "IAM Role ARN for Lambda Function"
+    Value: !GetAtt CareGiverNotificationExecutorRole.Arn
