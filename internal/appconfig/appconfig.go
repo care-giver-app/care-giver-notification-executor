@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/care-giver-app/care-giver-notification-executor/internal/log"
+	"github.com/care-giver-app/care-giver-golang-common/pkg/log"
 	"go.uber.org/zap"
 )
 
