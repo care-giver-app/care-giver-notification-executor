@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
-	"strings"
+	"html/template"
+	"slices"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -32,157 +35,126 @@ var (
 	sesClient    *ses.Client
 )
 
-type NotificationMessage struct {
-	Relationship     relationship.Relationship `json:"relationship"`
-	NotificationType string                    `json:"notification_type"`
-	Channel          []string                  `json:"channel"`
+//go:embed templates/*.html
+var templateFS embed.FS
+
+type Notification struct {
+	NotificationType string   `json:"notification_type"`
+	Channel          []string `json:"channel"`
+	ExecutionData    any      `json:"execution_data"`
+}
+
+type ReminderNotification struct {
+	Relationship relationship.Relationship `json:"relationship"`
+}
+
+type FeedbackNotification struct {
+	Email   string `json:"email"`
+	Message string `json:"message"`
 }
 
 type EmailService struct {
-	sesClient *ses.Client
-	appCfg    *appconfig.AppConfig
+	sesClient     *ses.Client
+	appCfg        *appconfig.AppConfig
+	emailTemplate *template.Template
 }
 
-func NewEmailService(sesClient *ses.Client, appCfg *appconfig.AppConfig) *EmailService {
-	return &EmailService{
-		sesClient: sesClient,
-		appCfg:    appCfg,
+func NewEmailService(sesClient *ses.Client, appCfg *appconfig.AppConfig, templateName string) (*EmailService, error) {
+	var templateFile string
+	switch templateName {
+	case "reminder":
+		templateFile = "email_reminder_notification.html"
+	case "feedback":
+		templateFile = "email_feedback.html"
+	default:
+		return nil, fmt.Errorf("unsupported template name: %s", templateName)
 	}
+
+	tmpl, err := template.ParseFS(templateFS, fmt.Sprintf("templates/%s", templateFile))
+	if err != nil {
+		return nil, err
+	}
+
+	return &EmailService{
+		sesClient:     sesClient,
+		appCfg:        appCfg,
+		emailTemplate: tmpl,
+	}, nil
 }
 
-const emailTemplate = `
-<!DOCTYPE html>
-<html>
+type ReminderEmailTemplateData struct {
+	UserName         string
+	ReceiverName     string
+	NotificationType string
+}
 
-<head>
-    <meta charset="utf-8">
-    <title>CareGiver Notification</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-        }
+type FeedbackEmailTemplateData struct {
+	FeedbackMessage string
+}
 
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #ffffff;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .header {
-            background-color: #ffffff;
-            color: #333;
-            padding: 30px 20px;
-            text-align: center;
-            border-bottom: 3px solid #4a90e2;
-        }
-
-        .logo {
-            max-width: 150px;
-            height: auto;
-            flex-shrink: 0;
-        }
-
-        .header-text {
-            flex-grow: 1;
-            text-align: center;
-            margin-left: 0px;
-        }
-
-        .header h1 {
-            margin: 0;
-            color: #4a90e2;
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        .content {
-            padding: 30px 20px;
-            background-color: #ffffff;
-        }
-
-        .content h2 {
-            color: #4a90e2;
-            margin-top: 0;
-        }
-
-        .content a {
-            color: #4a90e2;
-            text-decoration: none;
-        }
-
-        .content a:hover {
-            text-decoration: underline;
-        }
-
-        .footer {
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-            background-color: #f8f9fa;
-            border-top: 1px solid #e9ecef;
-        }
-
-        .notification-type {
-            background-color: #e8f4fd;
-            padding: 15px;
-            border-left: 4px solid #4a90e2;
-            margin: 20px 0;
-            border-radius: 0 4px 4px 0;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="container">
-        <div class="header">
-            <img src="https://www.caretosher.com/assets/caretosher-logo.png" alt="CareToSher Logo" class="logo">
-            <div class="header-text">
-                <h1>Daily Reminder</h1>
-            </div>
-        </div>
-        <div class="content">
-            <h2>Hello {{USER_NAME}},</h2>
-            <p>Thank you for caring for {{RECEIVER_NAME}}! If you have additional events that need to be logged today,
-                you
-                can add them from your dashboard at <a href="https://caretosher.com/">caretosher.com</a>.
-            </p>
-
-            <div class="notification-type">
-                <p><strong>Coming soon:</strong> Today's events will be shared with these emails.</p>
-            </div>
-
-            <p>We appreciate your dedication to providing excellent care!</p>
-        </div>
-        <div class="footer">
-            <p>This is an automated notification from CareToSher.com</p>
-            <p>© 2025 CareToSher. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-
-</html>
-`
-
-func (e *EmailService) SendNotificationEmail(ctx context.Context, user user.User, receiver receiver.Receiver, notifMsg NotificationMessage) error {
+func (e *EmailService) SendFeedbackEmail(ctx context.Context, toEmail string, message string) error {
 	logger := e.appCfg.Logger.Sugar()
 
-	// Replace template placeholders with actual values
-	emailBody := strings.ReplaceAll(emailTemplate, "{{USER_NAME}}", user.FirstName)
-	emailBody = strings.ReplaceAll(emailBody, "{{RECEIVER_NAME}}", receiver.FirstName)
-	emailBody = strings.ReplaceAll(emailBody, "{{NOTIFICATION_TYPE}}", strings.ReplaceAll(notifMsg.NotificationType, "_", " "))
+	templateData := FeedbackEmailTemplateData{
+		FeedbackMessage: message,
+	}
 
-	// Create email subject
-	subject := fmt.Sprintf("CareToSher Notification: %s - %s", strings.ReplaceAll(notifMsg.NotificationType, "_", " "), receiver.FirstName)
+	var emailBody bytes.Buffer
+	if err := e.emailTemplate.Execute(&emailBody, templateData); err != nil {
+		logger.Errorf("Failed to execute email template: %v", err)
+		return fmt.Errorf("failed to execute email template: %w", err)
+	}
+	emailBodyStr := emailBody.String()
 
-	// Prepare SES email input
+	subject := "You received feedback"
+
+	input := &ses.SendEmailInput{
+		Source: &e.appCfg.SenderEmailAddress,
+		Destination: &types.Destination{
+			ToAddresses: []string{toEmail},
+		},
+		Message: &types.Message{
+			Subject: &types.Content{
+				Data:    &subject,
+				Charset: &[]string{"UTF-8"}[0],
+			},
+			Body: &types.Body{
+				Html: &types.Content{
+					Data:    &emailBodyStr,
+					Charset: &[]string{"UTF-8"}[0],
+				},
+			},
+		},
+	}
+
+	result, err := e.sesClient.SendEmail(ctx, input)
+	if err != nil {
+		logger.Errorf("Failed to send email to %s: %v", toEmail, err)
+		return fmt.Errorf("failed to send email: %w", err)
+	}
+
+	logger.Infof("Successfully sent email to %s. Message ID: %s", toEmail, *result.MessageId)
+	return nil
+}
+
+func (e *EmailService) SendNotificationEmail(ctx context.Context, user user.User, receiver receiver.Receiver) error {
+	logger := e.appCfg.Logger.Sugar()
+
+	templateData := ReminderEmailTemplateData{
+		UserName:     user.FirstName,
+		ReceiverName: receiver.FirstName,
+	}
+
+	var emailBody bytes.Buffer
+	if err := e.emailTemplate.Execute(&emailBody, templateData); err != nil {
+		logger.Errorf("Failed to execute email template: %v", err)
+		return fmt.Errorf("failed to execute email template: %w", err)
+	}
+
+	subject := fmt.Sprintf("CareToSher Notification: %s - %s", templateData.NotificationType, receiver.FirstName)
+
+	emailBodyStr := emailBody.String()
+
 	input := &ses.SendEmailInput{
 		Source: &e.appCfg.SenderEmailAddress,
 		Destination: &types.Destination{
@@ -195,14 +167,13 @@ func (e *EmailService) SendNotificationEmail(ctx context.Context, user user.User
 			},
 			Body: &types.Body{
 				Html: &types.Content{
-					Data:    &emailBody,
+					Data:    &emailBodyStr,
 					Charset: &[]string{"UTF-8"}[0],
 				},
 			},
 		},
 	}
 
-	// Send the email
 	result, err := e.sesClient.SendEmail(ctx, input)
 	if err != nil {
 		logger.Errorf("Failed to send email to %s: %v", user.Email, err)
@@ -237,58 +208,99 @@ func init() {
 func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 	logger := appCfg.Logger.Sugar()
 	for _, message := range sqsEvent.Records {
-		logger.Infof("Processing message ID: %s", message.MessageId)
-		logger.Infof("Message Body: %s", message.Body)
-		var notifMsg NotificationMessage
+		var notifMsg Notification
 		err := json.Unmarshal([]byte(message.Body), &notifMsg)
 		if err != nil {
 			logger.Errorf("Failed to unmarshal message body: %v", err)
 			continue
 		}
 
-		logger.Infof("Processing notification for Receiver ID: %s & User ID: %s, Notification Type: %s, Channels: %v",
-			notifMsg.Relationship.ReceiverID, notifMsg.Relationship.UserID, notifMsg.NotificationType, notifMsg.Channel)
+		logger.Infof("Processing %s notification for the following channels: %v", notifMsg.NotificationType, notifMsg.Channel)
 
-		user, err := userRepo.GetUser(notifMsg.Relationship.UserID)
-		if err != nil {
-			logger.Errorf("Failed to get user: %v", err)
-			continue
-		}
-
-		receiver, err := receiverRepo.GetReceiver(notifMsg.Relationship.ReceiverID)
-		if err != nil {
-			logger.Errorf("Failed to get receiver: %v", err)
-			continue
-		}
-
-		if notifMsg.Relationship.EmailNotifications && contains(notifMsg.Channel, "email") {
-			emailService := NewEmailService(sesClient, appCfg)
-			err = emailService.SendNotificationEmail(
-				ctx,
-				user,
-				receiver,
-				notifMsg,
-			)
-			if err != nil {
-				logger.Errorf("Failed to send email notification: %v", err)
+		switch notifMsg.NotificationType {
+		case "reminder":
+			if slices.Contains(notifMsg.Channel, "email") {
+				if err := handleEmailReminder(ctx, notifMsg.ExecutionData); err != nil {
+					logger.Errorf("Failed to handle reminder: %v", err)
+					continue
+				}
+			}
+		case "feedback":
+			if err := handleEmailFeedback(ctx, notifMsg.ExecutionData); err != nil {
+				logger.Errorf("Failed to handle feedback: %v", err)
 				continue
 			}
-
-			logger.Infof("Successfully sent email notification to %s for receiver %s", user.Email, receiver.FirstName)
-		} else {
-			logger.Infof("Email notifications disabled or email not in channels for user %s", user.Email)
+		default:
+			logger.Warnf("Unknown notification type: %s", notifMsg.NotificationType)
 		}
 	}
 	return nil
 }
 
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
+func handleEmailReminder(ctx context.Context, executionData any) error {
+	logger := appCfg.Logger.Sugar()
+
+	var reminderData ReminderNotification
+	execDataBytes, err := json.Marshal(executionData)
+	if err != nil {
+		return err
 	}
-	return false
+	if err := json.Unmarshal(execDataBytes, &reminderData); err != nil {
+		return err
+
+	}
+
+	user, err := userRepo.GetUser(reminderData.Relationship.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	receiver, err := receiverRepo.GetReceiver(reminderData.Relationship.ReceiverID)
+	if err != nil {
+		return fmt.Errorf("failed to get receiver: %w", err)
+	}
+
+	if reminderData.Relationship.EmailNotifications {
+		emailService, err := NewEmailService(sesClient, appCfg, "reminder")
+		if err != nil {
+			return err
+		}
+
+		err = emailService.SendNotificationEmail(ctx, user, receiver)
+		if err != nil {
+			return err
+		}
+
+		logger.Infof("Successfully sent email notification to %s for receiver %s", user.Email, receiver.FirstName)
+	}
+
+	return nil
+}
+
+func handleEmailFeedback(ctx context.Context, executionData any) error {
+	logger := appCfg.Logger.Sugar()
+
+	var feedbackData FeedbackNotification
+	execDataBytes, err := json.Marshal(executionData)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(execDataBytes, &feedbackData); err != nil {
+		return err
+	}
+
+	emailService, err := NewEmailService(sesClient, appCfg, "feedback")
+	if err != nil {
+		return err
+	}
+
+	err = emailService.SendFeedbackEmail(ctx, feedbackData.Email, feedbackData.Message)
+	if err != nil {
+		return err
+	}
+
+	logger.Infof("Successfully sent feedback email")
+	return nil
 }
 
 func main() {
