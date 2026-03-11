@@ -197,7 +197,7 @@ func (e *EmailService) SendNotificationEmail(ctx context.Context, user user.User
 
 		templateEvents[i] = TemplateEvents{
 			Type:      e.Type,
-			Timestamp: ts.In(loc).Format("15:04 January 02"),
+			Timestamp: ts.In(loc).Format("3:04 PM January 02"),
 			Note:      e.Note,
 			Color:     color,
 		}
