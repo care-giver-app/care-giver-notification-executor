@@ -84,6 +84,25 @@
             margin: 20px 0;
             border-radius: 0 4px 4px 0;
         }
+
+        .events-list {
+            margin: 20px 0;
+            padding: 0;
+            list-style-type: none;
+        }
+
+        .event {
+            background-color: #f9f9f9;
+            border: 1px solid #e1e1e1;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4a90e2;
+        }
+
+        .event p {
+            margin: 5px 0;
+        }
     </style>
 </head>
 
@@ -92,7 +111,7 @@
         <div class="header">
             <img src="https://www.caretosher.com/assets/caretosher-logo.png" alt="CareToSher Logo" class="logo">
             <div class="header-text">
-                <h1>Daily Reminder</h1>
+                <h1>{{.NotificationType}}</h1>
             </div>
         </div>
         <div class="content">
@@ -101,9 +120,19 @@
                 you can add them from your dashboard at <a href="https://caretosher.com/">caretosher.com</a>.
             </p>
 
-            <div class="notification-type">
-                <p><strong>Coming soon:</strong> Today's events will be shared with these emails.</p>
+            {{if .Events}}
+            <h3>Today's events:</h3>
+            <div class="events-list">
+                {{range .Events}}
+                <div class="event" style="border-left-color: {{.Color}};">
+                    <p><strong>{{.Timestamp}}</strong> – {{.Type}}</p>
+                    {{if .Note}}<p>{{.Note}}</p>{{end}}
+                </div>
+                {{end}}
             </div>
+            {{else}}
+            <p><em>No events logged today.</em></p>
+            {{end}}
 
             <p>We appreciate your dedication to providing excellent care!</p>
         </div>

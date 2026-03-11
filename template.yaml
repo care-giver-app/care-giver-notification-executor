@@ -41,6 +41,7 @@ Resources:
           - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/user-table-${Env}
           - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/receiver-table-${Env}
           - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/event-table-${Env}
+          - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/event-table-${Env}/index/*
         - Effect: Allow
           Action:
           - sqs:ReceiveMessage
