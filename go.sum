@@ -30,8 +30,6 @@ github.com/aws/aws-sdk-go-v2/service/ses v1.34.11 h1:DZpXGSoAP6ZB0//dl31ZkRCrEVw
 github.com/aws/aws-sdk-go-v2/service/ses v1.34.11/go.mod h1:CeGX4LAFCsrBp24qazKmO/dwxghNCGbAoTbi64dGSEM=
 github.com/aws/aws-sdk-go-v2/service/signin v1.0.3 h1:d/6xOGIllc/XW1lzG9a4AUBMmpLA9PXcQnVPTuHHcik=
 github.com/aws/aws-sdk-go-v2/service/signin v1.0.3/go.mod h1:fQ7E7Qj9GiW8y0ClD7cUJk3Bz5Iw8wZkWDHsTe8vDKs=
-github.com/aws/aws-sdk-go-v2/service/sqs v1.42.13 h1:gfwPJhrWDHUeisN2p7bji+wocVmoJLJ3jgEQCKSiiMo=
-github.com/aws/aws-sdk-go-v2/service/sqs v1.42.13/go.mod h1:ZS67woOy/ftzvKK2+P53u2NPqImAPTWz+hBn+tchP7k=
 github.com/aws/aws-sdk-go-v2/service/sso v1.30.6 h1:8sTTiw+9yuNXcfWeqKF2x01GqCF49CpP4Z9nKrrk/ts=
 github.com/aws/aws-sdk-go-v2/service/sso v1.30.6/go.mod h1:8WYg+Y40Sn3X2hioaaWAAIngndR8n1XFdRPPX+7QBaM=
 github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.11 h1:E+KqWoVsSrj1tJ6I/fjDIu5xoS2Zacuu1zT+H7KtiIk=
@@ -40,10 +38,10 @@ github.com/aws/aws-sdk-go-v2/service/sts v1.41.3 h1:tzMkjh0yTChUqJDgGkcDdxvZDSrJ
 github.com/aws/aws-sdk-go-v2/service/sts v1.41.3/go.mod h1:T270C0R5sZNLbWUe8ueiAF42XSZxxPocTaGSgs5c/60=
 github.com/aws/smithy-go v1.24.0 h1:LpilSUItNPFr1eY85RYgTIg5eIEPtvFbskaFcmmIUnk=
 github.com/aws/smithy-go v1.24.0/go.mod h1:LEj2LM3rBRQJxPZTB4KuzZkaZYnZPnvgIhb4pu07mx0=
-github.com/care-giver-app/care-giver-golang-common v0.0.1 h1:qE64bo/LBAVmUovGxX7A8myo5VycpDOcM8i9X5Dt61Q=
-github.com/care-giver-app/care-giver-golang-common v0.0.1/go.mod h1:KfypSFU/TS5b9mzTQVOQOX7YDc83CMNOvSdkdNI92Vc=
 github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311004128-071c6bb146df h1:NISS0QB0kqoLUOboPG3Rvf+F7MVvxzUUNrcu82926bw=
 github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311004128-071c6bb146df/go.mod h1:KfypSFU/TS5b9mzTQVOQOX7YDc83CMNOvSdkdNI92Vc=
+github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311005615-2941096d0030 h1:ZHjbYc33O/GYgczK65gLBzPEM7yqoVBp5iAh2wQ4BLg=
+github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311005615-2941096d0030/go.mod h1:KfypSFU/TS5b9mzTQVOQOX7YDc83CMNOvSdkdNI92Vc=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=

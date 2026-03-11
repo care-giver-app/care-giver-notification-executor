@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"html/template"
 	"slices"
+	"sort"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -16,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
 	"github.com/care-giver-app/care-giver-golang-common/pkg/awsconfig"
 	"github.com/care-giver-app/care-giver-golang-common/pkg/dynamo"
+	"github.com/care-giver-app/care-giver-golang-common/pkg/event"
 	"github.com/care-giver-app/care-giver-golang-common/pkg/receiver"
 	"github.com/care-giver-app/care-giver-golang-common/pkg/relationship"
 	"github.com/care-giver-app/care-giver-golang-common/pkg/repository"
@@ -32,6 +35,7 @@ var (
 	appCfg       *appconfig.AppConfig
 	receiverRepo *repository.ReceiverRepository
 	userRepo     *repository.UserRepository
+	eventRepo    *repository.EventRepository
 	sesClient    *ses.Client
 )
 
@@ -82,10 +86,18 @@ func NewEmailService(sesClient *ses.Client, appCfg *appconfig.AppConfig, templat
 	}, nil
 }
 
+type TemplateEvents struct {
+	Type      string
+	Timestamp string
+	Note      string
+	Color     string
+}
+
 type ReminderEmailTemplateData struct {
 	UserName         string
 	ReceiverName     string
 	NotificationType string
+	Events           []TemplateEvents
 }
 
 type FeedbackEmailTemplateData struct {
@@ -140,9 +152,62 @@ func (e *EmailService) SendFeedbackEmail(ctx context.Context, toEmail string, me
 func (e *EmailService) SendNotificationEmail(ctx context.Context, user user.User, receiver receiver.Receiver) error {
 	logger := e.appCfg.Logger.Sugar()
 
+	econfigs, err := event.GetAllConfigs()
+	if err != nil {
+		logger.Errorf("Failed to get event configs: %v", err)
+	}
+
+	now := time.Now()
+	bound := repository.TimestampBound{
+		Upper: now.UTC().Format(time.RFC3339),
+		Lower: now.Add(-24 * time.Hour).UTC().Format(time.RFC3339),
+	}
+
+	events, err := eventRepo.GetEvents(receiver.ReceiverID, bound)
+	if err != nil {
+		logger.Errorf("Failed to retrieve today's events: %v", err)
+		events = []event.Entry{}
+	}
+
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].Timestamp < events[j].Timestamp
+	})
+
+	templateEvents := make([]TemplateEvents, len(events))
+	for i, e := range events {
+		ts, err := time.Parse(time.RFC3339, e.Timestamp)
+		if err != nil {
+			logger.Errorf("Failed to parse timestamp for %s", e.EventID)
+			continue
+		}
+
+		loc, err := time.LoadLocation("America/Chicago")
+		if err != nil {
+			logger.Errorf("Failed to get CST time")
+			continue
+		}
+
+		color := "#4a90e2"
+		for _, c := range econfigs {
+			if e.Type == c.Type {
+				color = c.Color.Primary
+				break
+			}
+		}
+
+		templateEvents[i] = TemplateEvents{
+			Type:      e.Type,
+			Timestamp: ts.In(loc).Format("15:04 January 02"),
+			Note:      e.Note,
+			Color:     color,
+		}
+	}
+
 	templateData := ReminderEmailTemplateData{
-		UserName:     user.FirstName,
-		ReceiverName: receiver.FirstName,
+		UserName:         user.FirstName,
+		ReceiverName:     receiver.FirstName,
+		NotificationType: "Daily Reminder",
+		Events:           templateEvents,
 	}
 
 	var emailBody bytes.Buffer
@@ -201,6 +266,7 @@ func init() {
 
 	receiverRepo = repository.NewReceiverRespository(context.TODO(), appCfg.ReceiverTableName, dynamoClient, appCfg.Logger)
 	userRepo = repository.NewUserRespository(context.TODO(), appCfg.UserTableName, dynamoClient, appCfg.Logger)
+	eventRepo = repository.NewEventRespository(context.TODO(), appCfg.EventTableName, dynamoClient, appCfg.Logger)
 
 	appCfg.Logger.Info("initializing relationship repository")
 }
