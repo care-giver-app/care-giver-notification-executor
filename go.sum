@@ -38,14 +38,8 @@ github.com/aws/aws-sdk-go-v2/service/sts v1.41.3 h1:tzMkjh0yTChUqJDgGkcDdxvZDSrJ
 github.com/aws/aws-sdk-go-v2/service/sts v1.41.3/go.mod h1:T270C0R5sZNLbWUe8ueiAF42XSZxxPocTaGSgs5c/60=
 github.com/aws/smithy-go v1.24.0 h1:LpilSUItNPFr1eY85RYgTIg5eIEPtvFbskaFcmmIUnk=
 github.com/aws/smithy-go v1.24.0/go.mod h1:LEj2LM3rBRQJxPZTB4KuzZkaZYnZPnvgIhb4pu07mx0=
-github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311004128-071c6bb146df h1:NISS0QB0kqoLUOboPG3Rvf+F7MVvxzUUNrcu82926bw=
-github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311004128-071c6bb146df/go.mod h1:KfypSFU/TS5b9mzTQVOQOX7YDc83CMNOvSdkdNI92Vc=
-github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311005615-2941096d0030 h1:ZHjbYc33O/GYgczK65gLBzPEM7yqoVBp5iAh2wQ4BLg=
-github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311005615-2941096d0030/go.mod h1:KfypSFU/TS5b9mzTQVOQOX7YDc83CMNOvSdkdNI92Vc=
-github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311012509-0f149f2bcd3c h1:gd18+EbANBIc1hMCekpsi1IPdM/ei31eDZH66e8/Jvw=
-github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311012509-0f149f2bcd3c/go.mod h1:KfypSFU/TS5b9mzTQVOQOX7YDc83CMNOvSdkdNI92Vc=
-github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311015142-ab076a7eed2c h1:L1kpgekxhGUVJqbbz5kgS5e1ZFk49TE8xnq2r8DiPzE=
-github.com/care-giver-app/care-giver-golang-common v0.2.2-0.20260311015142-ab076a7eed2c/go.mod h1:KfypSFU/TS5b9mzTQVOQOX7YDc83CMNOvSdkdNI92Vc=
+github.com/care-giver-app/care-giver-golang-common v0.3.0 h1:VvrVyg7T+KhmlrRCXsQlI3gT1/r5e9SJuSGvhsLFIjE=
+github.com/care-giver-app/care-giver-golang-common v0.3.0/go.mod h1:KfypSFU/TS5b9mzTQVOQOX7YDc83CMNOvSdkdNI92Vc=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
