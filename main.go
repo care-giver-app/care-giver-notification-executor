@@ -170,12 +170,12 @@ func (e *EmailService) SendNotificationEmail(ctx context.Context, user user.User
 	}
 
 	sort.Slice(events, func(i, j int) bool {
-		return events[i].Timestamp < events[j].Timestamp
+		return events[i].StartTime < events[j].StartTime
 	})
 
 	templateEvents := make([]TemplateEvents, len(events))
 	for i, e := range events {
-		ts, err := time.Parse(time.RFC3339, e.Timestamp)
+		ts, err := time.Parse(time.RFC3339, e.StartTime)
 		if err != nil {
 			logger.Errorf("Failed to parse timestamp for %s", e.EventID)
 			continue
