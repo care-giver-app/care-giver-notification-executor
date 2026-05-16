@@ -21,7 +21,7 @@ start-api: sam-build
 	sam local start-api --docker-network care-giver-infra_default
 
 deploy-dev: sam-build
-	sam deploy --config-env prod
+	sam deploy --config-env dev
 
 local-atdd: 
 	cd atdd && go test
